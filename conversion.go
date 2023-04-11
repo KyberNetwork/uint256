@@ -77,7 +77,7 @@ func FromBig(b *big.Int) (*Int, bool) {
 
 // MustFromBig is a convenience-constructor from big.Int.
 // Returns a new Int and panics if overflow occurred.
-// OBS: If b is `nil`, this method does _not_ panic, but 
+// OBS: If b is `nil`, this method does _not_ panic, but
 // instead returns `nil`
 func MustFromBig(b *big.Int) *Int {
 	if b == nil {
@@ -191,7 +191,13 @@ func MustFromHex(hex string) *Int {
 // UnmarshalText implements encoding.TextUnmarshaler
 func (z *Int) UnmarshalText(input []byte) error {
 	z.Clear()
-	return z.fromHex(string(input))
+	sInput := string(input)
+	switch {
+	case strings.HasPrefix(sInput, "0x"):
+		return z.fromHex(sInput)
+	default:
+		return z.fromDecimal(sInput)
+	}
 }
 
 // SetFromBig converts a big.Int to Int and sets the value to z.
@@ -623,11 +629,12 @@ func (z *Int) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+// Improvement: Unmarshal for int field, string of decimal.
 func (z *Int) UnmarshalJSON(input []byte) error {
-	if len(input) < 2 || input[0] != '"' || input[len(input)-1] != '"' {
-		return ErrNonString
+	if input[0] == '"' && input[len(input)-1] == '"' {
+		return z.UnmarshalText(input[1 : len(input)-1])
 	}
-	return z.UnmarshalText(input[1 : len(input)-1])
+	return z.UnmarshalText(input)
 }
 
 // String returns the hex encoding of b.
@@ -738,7 +745,6 @@ var (
 	ErrEmptyNumber      = errors.New("hex string \"0x\"")
 	ErrLeadingZero      = errors.New("hex number with leading zero digits")
 	ErrBig256Range      = errors.New("hex number > 256 bits")
-	ErrNonString        = errors.New("non-string")
 	ErrBadBufferLength  = errors.New("bad ssz buffer length")
 	ErrBadEncodedLength = errors.New("bad ssz encoded length")
 )
