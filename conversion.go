@@ -196,6 +196,15 @@ func (z *Int) UnmarshalText(input []byte) error {
 	case strings.HasPrefix(sInput, "0x"):
 		return z.fromHex(sInput)
 	default:
+		if len(input) > 0 && input[0] == 45 {
+			err := z.fromDecimal(sInput[1:])
+			if err != nil {
+				return err
+			}
+			z.Neg(z)
+			return nil
+		}
+
 		return z.fromDecimal(sInput)
 	}
 }
@@ -631,7 +640,7 @@ func (z *Int) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements json.Unmarshaler.
 // Improvement: Unmarshal for int field, string of decimal.
 func (z *Int) UnmarshalJSON(input []byte) error {
-	if input[0] == '"' && input[len(input)-1] == '"' {
+	if len(input) > 1 && input[0] == '"' && input[len(input)-1] == '"' {
 		return z.UnmarshalText(input[1 : len(input)-1])
 	}
 	return z.UnmarshalText(input)
